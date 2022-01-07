@@ -10,7 +10,6 @@ globalvar define BrigitteFix;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistBastionKnockout;
 
-globalvar define PlayersInIceBlock;
 globalvar define EnabledHeroes;
 
 playervar define LastHero;
@@ -18,8 +17,7 @@ playervar define BeatStatus;
 playervar define LastBeatUsage;
 playervar define ChargeStatus;
 playervar define LastChargeUsage;
-playervar define IceBlockStatus;
-playervar define LastGrappleUsage;
+playervar define IceBlockVictims;
 
 
 rule: "Initialize Globals"
@@ -34,7 +32,6 @@ rule: "Initialize Globals"
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
     LucioBoopSelfKnockback = WorkshopSettingToggle("Lúcio", "Soundwave Self-Knockback", true, 2);
 
-    PlayersInIceBlock = EmptyArray();
     EnabledHeroes = AllHeroes();
 }
 
@@ -134,30 +131,25 @@ if (ReinFullThrottle)
     Loop();
 }
 
-rule: "Mei Activate Ice Block"
+rule: "Mei Ice Block Damage"
 Event.OngoingPlayer
 Player.Mei
-if (IsUsingAbility1(EventPlayer()) == true)
+if (IsUsingAbility1(EventPlayer()))
 {
-    ModifyVariable(PlayersInIceBlock, Operation.AppendToArray, EventPlayer());
-}
-
-rule: "Mei Deactivate Ice Block"
-Event.OngoingPlayer
-Player.Mei
-if (IsUsingAbility1(EventPlayer()) == false)
-if (ArrayContains(PlayersInIceBlock, EventPlayer()) == true)
-{
-    ModifyVariable(PlayersInIceBlock, Operation.RemoveFromArrayByValue, EventPlayer());
-}
-
-rule: "Mei Ice Block Kill"
-Event.OngoingPlayer
-if (MeiIceBlockDamage)
-if (IsTrueForAny(PlayersInIceBlock, TeamOf(EventPlayer()) != TeamOf(ArrayElement()) && DistanceBetween(PositionOf(ArrayElement()) + Vector(0, -2, 0), EyePosition(EventPlayer())) < 0.8))
-{
-    // not quite right but doesn't matter in 99.9% of cases
-    Kill(EventPlayer(), FirstOf(SortedArray(PlayersInIceBlock, DistanceBetween(PositionOf(ArrayElement()), EyePosition(EventPlayer())))));
+    IceBlockVictims = EmptyArray();
+    while (IsUsingAbility1(EventPlayer()))
+    {
+        if (YOf(VelocityOf(EventPlayer())) < -5)
+        foreach (define player in AllPlayers(OppositeTeamOf(TeamOf(EventPlayer()))))
+        {
+            if (DistanceBetween(PositionOf(EventPlayer()) + Vector(0, -1, 0), EyePosition(player)) < 1.3 && !ArrayContains(IceBlockVictims, player))
+            {
+                Damage(player, EventPlayer(), 2000);
+                ModifyVariable(IceBlockVictims, Operation.AppendToArray, player);
+            }
+        }
+        Wait(0.1, WaitBehavior.IgnoreCondition);
+    }
 }
 
 rule: "Brigitte Fix"
@@ -204,6 +196,7 @@ if (IsButtonHeld(EventPlayer(), Button.Crouch) == true)
     SetUltimateCharge(EventPlayer(), 100);
     SetAbilityCooldown(EventPlayer(), Button.Ability1, 0);
     SetAbilityCooldown(EventPlayer(), Button.Ability2, 0);
+    SetAbilityCooldown(EventPlayer(), Button.SecondaryFire, 0);
 }
 
 rule: "Spawn/Summon Bot"
