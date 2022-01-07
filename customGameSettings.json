@@ -1,0 +1,13 @@
+{
+  "Modes": {
+    "All": {
+      "Competitive Rules": true
+    },
+    "Assault": {},
+    "Control": {},
+    "Escort": {},
+    "Hybrid": {}
+  },
+  "Description": "A custom patch made by EmuMan to add new ability features and changes into the game, mostly for entertainment.",
+  "Mode Name": "EmuPatch"
+}

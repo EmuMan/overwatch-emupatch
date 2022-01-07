@@ -1,0 +1,223 @@
+import "customGameSettings.json";
+
+globalvar define LucioBeatDamage;
+globalvar define LucioBeatSelfKnockback;
+globalvar define LucioBoopSelfKnockback;
+globalvar define ReinChargeCancel;
+globalvar define ReinFullThrottle;
+globalvar define MeiIceBlockDamage;
+globalvar define BrigitteFix;
+globalvar define DoomfistKBResist;
+globalvar define DoomfistBastionKnockout;
+
+globalvar define PlayersInIceBlock;
+globalvar define EnabledHeroes;
+
+playervar define LastHero;
+playervar define BeatStatus;
+playervar define LastBeatUsage;
+playervar define ChargeStatus;
+playervar define LastChargeUsage;
+playervar define IceBlockStatus;
+playervar define LastGrappleUsage;
+
+
+rule: "Initialize Globals"
+{
+    LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
+    LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
+    LucioBoopSelfKnockback = WorkshopSettingToggle("Lúcio", "Soundwave Self-Knockback", true, 2);
+    ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
+    ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
+    MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
+    BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
+    DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
+    DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Punch Removes Bastion Turret Form", true, 1);
+
+    PlayersInIceBlock = EmptyArray();
+    EnabledHeroes = AllHeroes();
+}
+
+rule: "Lucio Using Beat"
+Event.OngoingPlayer
+Player.Lucio
+if (IsUsingUltimate(EventPlayer()) == true)
+if (BeatStatus == 0)
+{
+    BeatStatus = 1;
+    LastBeatUsage = TotalTimeElapsed();
+}
+
+rule: "Lucio Stopped Using Beat"
+Event.OngoingPlayer
+Player.Lucio
+if (IsUsingUltimate(EventPlayer()) == false)
+{
+    BeatStatus = 0;
+}
+
+rule: "Lucio Hit Ground"
+Event.OngoingPlayer
+Player.Lucio
+if (IsOnGround(EventPlayer()) == true)
+if (BeatStatus == 1)
+if (TotalTimeElapsed() - LastBeatUsage > 0.7)
+{
+    BeatStatus = 2;
+    if (LucioBeatSelfKnockback)
+    {
+        ApplyImpulse(EventPlayer(), Up(), 20, Relative.ToWorld, ContraryMotion.Cancel);
+    }
+    if (LucioBeatDamage)
+    {
+        Damage(PlayersWithinRadius(PositionOf(EventPlayer()) + Vector(0, -2, 0), 1.5, OppositeTeamOf(TeamOf(EventPlayer())), RadiusLOS.SurfacesAndEnemyBarriers), EventPlayer(), 2000);
+    }
+}
+
+rule: "Lucio Boop Knockback"
+Event.OngoingPlayer
+Player.Lucio
+if (IsFiringSecondary(EventPlayer()) == true)
+if (AngleBetweenVectors(FacingDirectionOf(EventPlayer()), Down()) < 10)
+if (LucioBoopSelfKnockback)
+{
+    ApplyImpulse(EventPlayer(), FacingDirectionOf(EventPlayer()) * -1, 10, Relative.ToWorld, ContraryMotion.CancelXYZ);
+}
+
+rule: "Rein Using Charge"
+Event.OngoingPlayer
+Player.Reinhardt
+if (IsUsingAbility1(EventPlayer()) == true)
+if (ChargeStatus == 0)
+{
+    ChargeStatus = 1;
+    LastChargeUsage = TotalTimeElapsed();
+}
+
+rule: "Rein Stopped Using Charge"
+Event.OngoingPlayer
+Player.Reinhardt
+if (IsUsingAbility1(EventPlayer()) == false)
+{
+    ChargeStatus = 0;
+}
+
+rule: "Rein Charge Cancel"
+Event.OngoingPlayer
+Player.Reinhardt
+if (IsButtonHeld(EventPlayer(), Button.Ability1) == true)
+if (IsUsingAbility1(EventPlayer()) == true)
+if (TotalTimeElapsed() - LastChargeUsage > 0.5)
+if (ReinChargeCancel)
+{
+    CancelPrimaryAction(EventPlayer());
+    ApplyImpulse(EventPlayer(), FacingDirectionOf(EventPlayer()) + Vector(0, 0.1, 0), 10, Relative.ToWorld, ContraryMotion.Incorporate);
+}
+
+rule: "Rein Full Throttle"
+Event.OngoingPlayer
+if (ReinFullThrottle)
+{
+    LastHero = HeroOf(EventPlayer());
+    MinWait();
+    if (LastHero != HeroOf(EventPlayer()))
+    {
+        if (HeroOf(EventPlayer()) == Hero.Reinhardt)
+        {
+            ForceThrottle(EventPlayer(), 1, 1, 0, 0, 0, 1);
+        }
+        else
+        {
+            StopForcingThrottle(EventPlayer());
+        }
+    }
+    Loop();
+}
+
+rule: "Mei Activate Ice Block"
+Event.OngoingPlayer
+Player.Mei
+if (IsUsingAbility1(EventPlayer()) == true)
+{
+    ModifyVariable(PlayersInIceBlock, Operation.AppendToArray, EventPlayer());
+}
+
+rule: "Mei Deactivate Ice Block"
+Event.OngoingPlayer
+Player.Mei
+if (IsUsingAbility1(EventPlayer()) == false)
+if (ArrayContains(PlayersInIceBlock, EventPlayer()) == true)
+{
+    ModifyVariable(PlayersInIceBlock, Operation.RemoveFromArrayByValue, EventPlayer());
+}
+
+rule: "Mei Ice Block Kill"
+Event.OngoingPlayer
+if (MeiIceBlockDamage)
+if (IsTrueForAny(PlayersInIceBlock, TeamOf(EventPlayer()) != TeamOf(ArrayElement()) && DistanceBetween(PositionOf(ArrayElement()) + Vector(0, -2, 0), EyePosition(EventPlayer())) < 0.8))
+{
+    // not quite right but doesn't matter in 99.9% of cases
+    Kill(EventPlayer(), FirstOf(SortedArray(PlayersInIceBlock, DistanceBetween(PositionOf(ArrayElement()), EyePosition(EventPlayer())))));
+}
+
+rule: "Brigitte Fix"
+if (BrigitteFix)
+{
+    ModifyVariable(EnabledHeroes, Operation.RemoveFromArrayByValue, Hero.Brigitte);
+}
+
+rule: "Doomfist KB Resist"
+Event.PlayerReceivedKnockback
+Player.Doomfist
+if (DoomfistKBResist)
+if (IsUsingAbility1(EventPlayer()) || IsUsingAbility2(EventPlayer()) || IsFiringSecondary(EventPlayer()))
+{
+    SetKnockbackReceived(EventPlayer(), 50);
+}
+
+rule: "Doomfist Bastion Punch"
+Event.OnDamageTaken
+if (HeroOf(Attacker()) == Hero.Doomfist)
+if (EventAbility() == Button.SecondaryFire)
+if (DoomfistBastionKnockout)
+{
+    CancelPrimaryAction(EventPlayer());
+    SetStatus(EventPlayer(), Attacker(), Status.Stunned, 0.5);
+    SetGravity(EventPlayer(), 10);
+    ApplyImpulse(EventPlayer(), EventDirection() + Vector(0, 0.05, 0), 25, Relative.ToWorld, ContraryMotion.Cancel);
+    Wait(0.3, WaitBehavior.IgnoreCondition);
+    SetGravity(EventPlayer(), 100);
+}
+
+rule: "Player Initialization"
+Event.OnPlayerJoin
+{
+    SetAllowedHeroes(EventPlayer(), EnabledHeroes);
+}
+
+rule: "Instant Abilities"
+Event.OngoingPlayer
+if (WorkshopSettingToggle("Debug", "Instant Abilities (Crouch + Interact)", false, 0) == true)
+if (IsButtonHeld(EventPlayer(), Button.Interact) == true)
+if (IsButtonHeld(EventPlayer(), Button.Crouch) == true)
+{
+    SetUltimateCharge(EventPlayer(), 100);
+    SetAbilityCooldown(EventPlayer(), Button.Ability1, 0);
+    SetAbilityCooldown(EventPlayer(), Button.Ability2, 0);
+}
+
+rule: "Spawn/Summon Bot"
+Event.OngoingPlayer
+if (WorkshopSettingToggle("Debug", "Enemy Dummy Bot (Interact)", false, 0) == true)
+if (IsButtonHeld(EventPlayer(), Button.Interact) == true)
+if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
+{
+    if (IsDummyBot(PlayersInSlot(0, Team.Team2)))
+    {
+        Teleport(PlayersInSlot(0, Team.Team2), EventPlayer());
+    }
+    else
+    {
+        CreateDummyBot(Hero.Ana, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
+    }
+}
