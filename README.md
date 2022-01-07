@@ -27,6 +27,7 @@ All of the changes listed below can be toggled through the workshop settings to 
 ### Mei
 
 - Cryo-Freeze now instantly kills anyone Mei directly falls on while using it
+- Mei's Ultimate now transforms her into a rolling snowball that deals 250 damage on contact
 
 ### Brigitte
 

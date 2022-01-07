@@ -6,11 +6,13 @@ globalvar define LucioBoopSelfKnockback;
 globalvar define ReinChargeCancel;
 globalvar define ReinFullThrottle;
 globalvar define MeiIceBlockDamage;
+globalvar define MeiRollingSnowballUlt;
 globalvar define BrigitteFix;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistBastionKnockout;
 
 globalvar define EnabledHeroes;
+globalvar define ActionButtons;
 
 playervar define LastHero;
 playervar define BeatStatus;
@@ -18,6 +20,38 @@ playervar define LastBeatUsage;
 playervar define ChargeStatus;
 playervar define LastChargeUsage;
 playervar define IceBlockVictims;
+playervar define Snowball;
+playervar define SnowballTime;
+playervar define SnowballVictims;
+playervar define SnowballFacing;
+
+
+define RemoveY(Vector vector)
+{
+    return Vector(XOf(vector), 0, ZOf(vector));
+}
+
+void SetThirdPerson(Player player, Number distance, Number height, Boolean removeY)
+{
+    define direction = removeY ? RemoveY(FacingDirectionOf(player)) : FacingDirectionOf(player);
+    StartCamera(
+        Player         : player,
+        EyePosition    : UpdateEveryFrame(PositionOf(player) + Up() * height + direction * -distance),
+        LookAtPosition : UpdateEveryFrame(PositionOf(player) + direction * 1000),
+        BlendSpeed     : 0
+    );
+}
+
+define AbleToAct(Player player)
+{
+    return !(
+        HasStatus(player, Status.Asleep) ||
+        HasStatus(player, Status.Frozen) ||
+        HasStatus(player, Status.Hacked) ||
+        HasStatus(player, Status.KnockedDown) ||
+        HasStatus(player, Status.Stunned)
+    );
+}
 
 
 rule: "Initialize Globals"
@@ -27,12 +61,20 @@ rule: "Initialize Globals"
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 1);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
+    MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 1);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
     LucioBoopSelfKnockback = WorkshopSettingToggle("Lúcio", "Soundwave Self-Knockback", true, 2);
 
     EnabledHeroes = AllHeroes();
+    ActionButtons = [Button.Ability1, Button.Ability2, Button.Crouch, Button.Jump, Button.Melee, Button.PrimaryFire, Button.Reload, Button.SecondaryFire, Button.Ultimate];
+}
+
+rule: "Player Initialization"
+Event.OnPlayerJoin
+{
+    SetAllowedHeroes(EventPlayer(), EnabledHeroes);
 }
 
 rule: "Lucio Using Beat"
@@ -152,6 +194,101 @@ if (IsUsingAbility1(EventPlayer()))
     }
 }
 
+rule: "Mei Snowball"
+Event.OngoingPlayer
+Player.Mei
+if (IsUsingUltimate(EventPlayer()))
+if (MeiRollingSnowballUlt)
+{
+    Wait(0.3);
+    CancelPrimaryAction(EventPlayer());
+    if (Snowball == null && AbleToAct(EventPlayer()))
+    {
+        SetStatus(EventPlayer(), EventPlayer(), Status.PhasedOut, 3.0);
+        CreateEffect(
+            VisibleTo    : AllPlayers(Team.All),
+            Type         : Effect.Sphere,
+            Color        : Color.Aqua,
+            Position     : UpdateEveryFrame(PositionOf(EventPlayer()) + Up()),
+            Radius       : 1,
+            Reevaluation : EffectRev.VisibleToPositionAndRadius
+        );
+        Snowball = LastCreatedEntity();
+        SnowballVictims = EmptyArray();
+        SnowballFacing = RemoveY(FacingDirectionOf(EventPlayer()));
+        SetInvisible(EventPlayer(), InvisibleTo.All);
+        SetFacing(EventPlayer(), SnowballFacing - Vector(0, 100, 0), Relative.ToWorld);
+        StartFacing(EventPlayer(), SnowballFacing - Vector(0, 100, 0), 0, Relative.ToWorld, FacingRev.None);
+        SetThirdPerson(EventPlayer(), 5, 3, true);
+        SetMoveSpeed(EventPlayer(), 200);
+        ForceThrottle(EventPlayer(), 1, 1, 0, 0, 0, 0);
+        foreach (define button in ActionButtons)
+        {
+            DisallowButton(EventPlayer(), button);
+        }
+        AllowButton(EventPlayer(), Button.PrimaryFire);
+        SetAmmo(EventPlayer(), 0, MaxAmmo(EventPlayer()));
+        StartHoldingButton(EventPlayer(), Button.PrimaryFire);
+        SnowballTime = 3.0;
+        CreateProgressBarHudText(
+            VisibleTo         : EventPlayer(),
+            Value             : 100 * SnowballTime / 3.0,
+            Text              : null,
+            Location          : Location.Top,
+            SortOrder         : 10,
+            ProgressBarColor  : Color.Aqua,
+            TextColor         : Color.White,
+            Reevaluation      : ProgressBarHudEvaluation.Values,
+            NonteamSpectators : Spectators.DefaultVisibility
+        );
+        define progressID = LastTextID();
+        ChaseVariableAtRate(SnowballTime, 0.0, 1.0, RateChaseReevaluation.None);
+        PlayEffect(AllPlayers(), PlayEffect.GoodExplosion, Color.White, PositionOf(EventPlayer()) + Up(), 1);
+        CreateEffect(AllPlayers(), Effect.BadAuraSound, Color.White, EventPlayer(), 400, EffectRev.PositionAndRadius);
+        define snowballSoundLow = LastCreatedEntity();
+        CreateEffect(AllPlayers(), Effect.SparklesSound, Color.White, EventPlayer(), 100, EffectRev.PositionAndRadius);
+        define snowballSoundHigh = LastCreatedEntity();
+        CreateEffect(AllPlayers(), Effect.Sparkles, Color.White, UpdateEveryFrame(PositionOf(EventPlayer()) + Up()), 1, EffectRev.VisibleToPositionAndRadius);
+        define snowballEffectSparkles = LastCreatedEntity();
+        CreateEffect(AllPlayers(), Effect.Cloud, Color.White, UpdateEveryFrame(PositionOf(EventPlayer()) + Up()), 1, EffectRev.VisibleToPositionAndRadius);
+        define snowballEffectClouds = LastCreatedEntity();
+        while (SnowballTime > 0.0)
+        {
+            MinWait();
+            foreach (define player in AllPlayers(OppositeTeamOf(TeamOf(EventPlayer()))))
+            {
+                if (!ArrayContains(SnowballVictims, player) &&
+                    DistanceBetween(EventPlayer(), player) < 2 &&
+                    IsInLineOfSight(EventPlayer(), player, BarrierLOS.EnemyBarriersBlock))
+                {
+                    Damage(player, EventPlayer(), 300);
+                    ApplyImpulse(player, player - EventPlayer() + Up() * 0.5, 25, Relative.ToWorld, ContraryMotion.Cancel);
+                    ModifyVariable(SnowballVictims, Operation.AppendToArray, player);
+                }
+            }
+        }
+        DestroyProgressBarHudText(progressID);
+        DestroyEffect(Snowball);
+        DestroyEffect(snowballSoundLow);
+        DestroyEffect(snowballSoundHigh);
+        DestroyEffect(snowballEffectSparkles);
+        DestroyEffect(snowballEffectClouds);
+        Snowball = null;
+        SetInvisible(EventPlayer(), InvisibleTo.None);
+        SetFacing(EventPlayer(), SnowballFacing, Relative.ToWorld);
+        StopFacing(EventPlayer());
+        StopCamera(EventPlayer());
+        SetMoveSpeed(EventPlayer(), 100);
+        StopForcingThrottle(EventPlayer());
+        foreach (define button in ActionButtons)
+        {
+            AllowButton(EventPlayer(), button);
+        }
+        StopHoldingButton(EventPlayer(), Button.PrimaryFire);
+        SetAmmo(EventPlayer(), 0, MaxAmmo(EventPlayer()));
+    }
+}
+
 rule: "Brigitte Fix"
 if (BrigitteFix)
 {
@@ -179,12 +316,6 @@ if (DoomfistBastionKnockout)
     ApplyImpulse(EventPlayer(), EventDirection() + Vector(0, 0.05, 0), 25, Relative.ToWorld, ContraryMotion.Cancel);
     Wait(0.3, WaitBehavior.IgnoreCondition);
     SetGravity(EventPlayer(), 100);
-}
-
-rule: "Player Initialization"
-Event.OnPlayerJoin
-{
-    SetAllowedHeroes(EventPlayer(), EnabledHeroes);
 }
 
 rule: "Instant Abilities"
