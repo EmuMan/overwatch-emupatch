@@ -24,15 +24,15 @@ playervar define LastGrappleUsage;
 
 rule: "Initialize Globals"
 {
+    ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
+    ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
+    DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
+    DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 1);
+    MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
+    BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
     LucioBoopSelfKnockback = WorkshopSettingToggle("Lúcio", "Soundwave Self-Knockback", true, 2);
-    ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
-    ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
-    MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
-    BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
-    DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
-    DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Punch Removes Bastion Turret Form", true, 1);
 
     PlayersInIceBlock = EmptyArray();
     EnabledHeroes = AllHeroes();
