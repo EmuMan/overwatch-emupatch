@@ -23,6 +23,10 @@ All of the changes listed below can be toggled through the workshop settings to 
 - Charge can now be ended early by pressing the Charge key a second time
 - Reinhardt will now always be full throttling forwards, regardless of user input (off by default)
 
+### Winston
+
+- Primal Rage max health increased from 1000 to 1500
+
 ### Doomfist
 
 - Now has 50% knockback resistance while using any abilities

@@ -3,6 +3,7 @@ import "customGameSettings.json";
 globalvar define OrisaMountable;
 globalvar define ReinChargeCancel;
 globalvar define ReinFullThrottle;
+globalvar define WinstonPrimalHealth;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
@@ -86,6 +87,7 @@ rule: "Initialize Globals"
     OrisaMountable = WorkshopSettingToggle("Orisa", "Mountable", false, 0);
     ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
     ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
+    WinstonPrimalHealth = WorkshopSettingToggle("Winston", "Extra Primal Rage Health", true, 0);
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 1);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
@@ -198,6 +200,20 @@ if (ReinFullThrottle)
     Loop();
 }
 
+rule: "Winston Bonus HP"
+Event.OngoingPlayer
+if (IsUsingUltimate())
+if (WinstonPrimalHealth)
+{
+    if (EventPlayer().Hero() == Hero.Winston) {
+        EventPlayer().SetMaxHealth(150);
+        MinWait();
+        SetPlayerHealth(EventPlayer(), EventPlayer().MaxHealth());
+        WaitUntil(EventPlayer().Hero() != Hero.Winston || !IsUsingUltimate(EventPlayer()), 120);
+        EventPlayer().SetMaxHealth(100);
+    }
+}
+
 rule: "Doomfist KB Resist"
 Event.PlayerReceivedKnockback
 Player.Doomfist
@@ -209,6 +225,7 @@ if (IsUsingAbility1(EventPlayer()) || IsUsingAbility2(EventPlayer()) || IsFiring
 
 rule: "Doomfist Bastion Punch"
 Event.OnDamageTaken
+Player.Bastion
 if (HeroOf(Attacker()) == Hero.Doomfist)
 if (EventAbility() == Button.SecondaryFire)
 if (DoomfistBastionKnockout)
@@ -407,12 +424,12 @@ if (WorkshopSettingToggle("Debug", "Enemy Dummy Bot (Interact)", false, 0) == tr
 if (IsButtonHeld(EventPlayer(), Button.Interact) == true)
 if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
 {
-    if (IsDummyBot(PlayersInSlot(1, Team.Team1)))
+    if (IsDummyBot(PlayersInSlot(0, Team.Team2)))
     {
-        Teleport(PlayersInSlot(1, Team.Team1), EventPlayer());
+        Teleport(PlayersInSlot(0, Team.Team2), EventPlayer());
     }
     else
     {
-        CreateDummyBot(Hero.Orisa, Team.Team1, 1, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
+        CreateDummyBot(Hero.Orisa, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
     }
 }
