@@ -10,6 +10,7 @@ globalvar define MeiRollingSnowballUlt;
 globalvar define BrigitteFix;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistBastionKnockout;
+globalvar define OrisaMountable;
 
 globalvar define EnabledHeroes;
 globalvar define ActionButtons;
@@ -24,6 +25,8 @@ playervar define Snowball;
 playervar define SnowballTime;
 playervar define SnowballVictims;
 playervar define SnowballFacing;
+playervar define PlayerParent;
+playervar define PlayerChild;
 
 
 define RemoveY(Vector vector)
@@ -53,9 +56,34 @@ define AbleToAct(Player player)
     );
 }
 
+define AbleToBeMounted(Player player)
+{
+    return !(
+        HasStatus(player, Status.Asleep) ||
+        HasStatus(player, Status.Hacked) ||
+        HasStatus(player, Status.KnockedDown) ||
+        IsInSpawnRoom(EventPlayer())
+    );
+}
+
+define MountPlayer(Player child, Player parent, Vector offset)
+{
+    AttachPlayers(child, parent, offset);
+    parent.PlayerChild = child;
+    child.PlayerParent = parent;
+}
+
+define DismountPlayer(Player child)
+{
+    DetachPlayers(child);
+    child.PlayerParent.PlayerChild = null;
+    child.PlayerParent = null;
+}
+
 
 rule: "Initialize Globals"
 {
+    OrisaMountable = WorkshopSettingToggle("Orisa", "Mountable", false, 0);
     ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
     ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
@@ -318,6 +346,49 @@ if (DoomfistBastionKnockout)
     SetGravity(EventPlayer(), 100);
 }
 
+rule: "Orisa Horse Mount"
+Event.OngoingPlayer
+if (IsButtonHeld(EventPlayer(), Button.Interact))
+if (OrisaMountable)
+{
+    define target = RayCastHitPlayer(
+        StartPOS                  : EventPlayer(),
+        EndPOS                    : EyePosition(EventPlayer()) + FacingDirectionOf(EventPlayer()) * 3,
+        PlayersToInclude          : AllPlayers(TeamOf(EventPlayer())),
+        PlayersToExclude          : EventPlayer(),
+        IncludePlayerOwnedObjects : false
+    );
+    if (target != null && target.Hero() == Hero.Orisa && target.PlayerChild == null && EventPlayer().PlayerParent == null && AbleToBeMounted(target))
+    {
+        MountPlayer(EventPlayer(), target, Vector(0, 1.5, 0));
+        while (EventPlayer().PlayerParent != null)
+        {
+            Wait(0.2, WaitBehavior.IgnoreCondition);
+            if (!AbleToBeMounted(EventPlayer().PlayerParent))
+            {
+                DismountPlayer(EventPlayer());
+                break;
+            }
+        }
+    }
+}
+
+rule: "Orisa Horse Dismount"
+Event.OngoingPlayer
+if (IsButtonHeld(EventPlayer(), Button.Crouch))
+if (PlayerParent != null)
+{
+    DismountPlayer(EventPlayer());
+}
+
+rule: "Orisa Horse Death"
+Event.OnDeath
+Player.Orisa
+if (PlayerChild != null)
+{
+    DismountPlayer(EventPlayer().PlayerChild);
+}
+
 rule: "Instant Abilities"
 Event.OngoingPlayer
 if (WorkshopSettingToggle("Debug", "Instant Abilities (Crouch + Interact)", false, 0) == true)
@@ -336,12 +407,12 @@ if (WorkshopSettingToggle("Debug", "Enemy Dummy Bot (Interact)", false, 0) == tr
 if (IsButtonHeld(EventPlayer(), Button.Interact) == true)
 if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
 {
-    if (IsDummyBot(PlayersInSlot(0, Team.Team2)))
+    if (IsDummyBot(PlayersInSlot(1, Team.Team1)))
     {
-        Teleport(PlayersInSlot(0, Team.Team2), EventPlayer());
+        Teleport(PlayersInSlot(1, Team.Team1), EventPlayer());
     }
     else
     {
-        CreateDummyBot(Hero.Ana, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
+        CreateDummyBot(Hero.Orisa, Team.Team1, 1, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
     }
 }
