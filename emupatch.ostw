@@ -1,23 +1,23 @@
 import "customGameSettings.json";
 
-globalvar define LucioBeatDamage;
-globalvar define LucioBeatSelfKnockback;
-globalvar define LucioBoopSelfKnockback;
+globalvar define OrisaMountable;
 globalvar define ReinChargeCancel;
 globalvar define ReinFullThrottle;
+globalvar define DoomfistKBResist;
+globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
 globalvar define MeiRollingSnowballUlt;
 globalvar define BrigitteFix;
-globalvar define DoomfistKBResist;
-globalvar define DoomfistBastionKnockout;
-globalvar define OrisaMountable;
+globalvar define LucioBeatDamage;
+globalvar define LucioBeatSelfKnockback;
+globalvar define LucioBoopSelfKnockback;
 
 globalvar define EnabledHeroes;
 globalvar define ActionButtons;
 
 playervar define LastHero;
-playervar define BeatStatus;
-playervar define LastBeatUsage;
+playervar define PlayerParent;
+playervar define PlayerChild;
 playervar define ChargeStatus;
 playervar define LastChargeUsage;
 playervar define IceBlockVictims;
@@ -25,8 +25,8 @@ playervar define Snowball;
 playervar define SnowballTime;
 playervar define SnowballVictims;
 playervar define SnowballFacing;
-playervar define PlayerParent;
-playervar define PlayerChild;
+playervar define BeatStatus;
+playervar define LastBeatUsage;
 
 
 define RemoveY(Vector vector)
@@ -105,50 +105,47 @@ Event.OnPlayerJoin
     SetAllowedHeroes(EventPlayer(), EnabledHeroes);
 }
 
-rule: "Lucio Using Beat"
+rule: "Orisa Horse Mount"
 Event.OngoingPlayer
-Player.Lucio
-if (IsUsingUltimate(EventPlayer()) == true)
-if (BeatStatus == 0)
+if (IsButtonHeld(EventPlayer(), Button.Interact))
+if (OrisaMountable)
 {
-    BeatStatus = 1;
-    LastBeatUsage = TotalTimeElapsed();
-}
-
-rule: "Lucio Stopped Using Beat"
-Event.OngoingPlayer
-Player.Lucio
-if (IsUsingUltimate(EventPlayer()) == false)
-{
-    BeatStatus = 0;
-}
-
-rule: "Lucio Hit Ground"
-Event.OngoingPlayer
-Player.Lucio
-if (IsOnGround(EventPlayer()) == true)
-if (BeatStatus == 1)
-if (TotalTimeElapsed() - LastBeatUsage > 0.7)
-{
-    BeatStatus = 2;
-    if (LucioBeatSelfKnockback)
+    define target = RayCastHitPlayer(
+        StartPOS                  : EventPlayer(),
+        EndPOS                    : EyePosition(EventPlayer()) + FacingDirectionOf(EventPlayer()) * 3,
+        PlayersToInclude          : AllPlayers(TeamOf(EventPlayer())),
+        PlayersToExclude          : EventPlayer(),
+        IncludePlayerOwnedObjects : false
+    );
+    if (target != null && target.Hero() == Hero.Orisa && target.PlayerChild == null && EventPlayer().PlayerParent == null && AbleToBeMounted(target))
     {
-        ApplyImpulse(EventPlayer(), Up(), 20, Relative.ToWorld, ContraryMotion.Cancel);
-    }
-    if (LucioBeatDamage)
-    {
-        Damage(PlayersWithinRadius(PositionOf(EventPlayer()) + Vector(0, -2, 0), 1.5, OppositeTeamOf(TeamOf(EventPlayer())), RadiusLOS.SurfacesAndEnemyBarriers), EventPlayer(), 2000);
+        MountPlayer(EventPlayer(), target, Vector(0, 1.5, 0));
+        while (EventPlayer().PlayerParent != null)
+        {
+            Wait(0.2, WaitBehavior.IgnoreCondition);
+            if (!AbleToBeMounted(EventPlayer().PlayerParent))
+            {
+                DismountPlayer(EventPlayer());
+                break;
+            }
+        }
     }
 }
 
-rule: "Lucio Boop Knockback"
+rule: "Orisa Horse Dismount"
 Event.OngoingPlayer
-Player.Lucio
-if (IsFiringSecondary(EventPlayer()) == true)
-if (AngleBetweenVectors(FacingDirectionOf(EventPlayer()), Down()) < 10)
-if (LucioBoopSelfKnockback)
+if (IsButtonHeld(EventPlayer(), Button.Crouch))
+if (PlayerParent != null)
 {
-    ApplyImpulse(EventPlayer(), FacingDirectionOf(EventPlayer()) * -1, 10, Relative.ToWorld, ContraryMotion.CancelXYZ);
+    DismountPlayer(EventPlayer());
+}
+
+rule: "Orisa Horse Death"
+Event.OnDeath
+Player.Orisa
+if (PlayerChild != null)
+{
+    DismountPlayer(EventPlayer().PlayerChild);
 }
 
 rule: "Rein Using Charge"
@@ -199,6 +196,29 @@ if (ReinFullThrottle)
         }
     }
     Loop();
+}
+
+rule: "Doomfist KB Resist"
+Event.PlayerReceivedKnockback
+Player.Doomfist
+if (DoomfistKBResist)
+if (IsUsingAbility1(EventPlayer()) || IsUsingAbility2(EventPlayer()) || IsFiringSecondary(EventPlayer()))
+{
+    SetKnockbackReceived(EventPlayer(), 50);
+}
+
+rule: "Doomfist Bastion Punch"
+Event.OnDamageTaken
+if (HeroOf(Attacker()) == Hero.Doomfist)
+if (EventAbility() == Button.SecondaryFire)
+if (DoomfistBastionKnockout)
+{
+    CancelPrimaryAction(EventPlayer());
+    SetStatus(EventPlayer(), Attacker(), Status.Stunned, 0.5);
+    SetGravity(EventPlayer(), 10);
+    ApplyImpulse(EventPlayer(), EventDirection() + Vector(0, 0.05, 0), 25, Relative.ToWorld, ContraryMotion.Cancel);
+    Wait(0.3, WaitBehavior.IgnoreCondition);
+    SetGravity(EventPlayer(), 100);
 }
 
 rule: "Mei Ice Block Damage"
@@ -323,70 +343,50 @@ if (BrigitteFix)
     ModifyVariable(EnabledHeroes, Operation.RemoveFromArrayByValue, Hero.Brigitte);
 }
 
-rule: "Doomfist KB Resist"
-Event.PlayerReceivedKnockback
-Player.Doomfist
-if (DoomfistKBResist)
-if (IsUsingAbility1(EventPlayer()) || IsUsingAbility2(EventPlayer()) || IsFiringSecondary(EventPlayer()))
-{
-    SetKnockbackReceived(EventPlayer(), 50);
-}
-
-rule: "Doomfist Bastion Punch"
-Event.OnDamageTaken
-if (HeroOf(Attacker()) == Hero.Doomfist)
-if (EventAbility() == Button.SecondaryFire)
-if (DoomfistBastionKnockout)
-{
-    CancelPrimaryAction(EventPlayer());
-    SetStatus(EventPlayer(), Attacker(), Status.Stunned, 0.5);
-    SetGravity(EventPlayer(), 10);
-    ApplyImpulse(EventPlayer(), EventDirection() + Vector(0, 0.05, 0), 25, Relative.ToWorld, ContraryMotion.Cancel);
-    Wait(0.3, WaitBehavior.IgnoreCondition);
-    SetGravity(EventPlayer(), 100);
-}
-
-rule: "Orisa Horse Mount"
+rule: "Lucio Using Beat"
 Event.OngoingPlayer
-if (IsButtonHeld(EventPlayer(), Button.Interact))
-if (OrisaMountable)
+Player.Lucio
+if (IsUsingUltimate(EventPlayer()) == true)
+if (BeatStatus == 0)
 {
-    define target = RayCastHitPlayer(
-        StartPOS                  : EventPlayer(),
-        EndPOS                    : EyePosition(EventPlayer()) + FacingDirectionOf(EventPlayer()) * 3,
-        PlayersToInclude          : AllPlayers(TeamOf(EventPlayer())),
-        PlayersToExclude          : EventPlayer(),
-        IncludePlayerOwnedObjects : false
-    );
-    if (target != null && target.Hero() == Hero.Orisa && target.PlayerChild == null && EventPlayer().PlayerParent == null && AbleToBeMounted(target))
+    BeatStatus = 1;
+    LastBeatUsage = TotalTimeElapsed();
+}
+
+rule: "Lucio Stopped Using Beat"
+Event.OngoingPlayer
+Player.Lucio
+if (IsUsingUltimate(EventPlayer()) == false)
+{
+    BeatStatus = 0;
+}
+
+rule: "Lucio Hit Ground"
+Event.OngoingPlayer
+Player.Lucio
+if (IsOnGround(EventPlayer()) == true)
+if (BeatStatus == 1)
+if (TotalTimeElapsed() - LastBeatUsage > 0.7)
+{
+    BeatStatus = 2;
+    if (LucioBeatSelfKnockback)
     {
-        MountPlayer(EventPlayer(), target, Vector(0, 1.5, 0));
-        while (EventPlayer().PlayerParent != null)
-        {
-            Wait(0.2, WaitBehavior.IgnoreCondition);
-            if (!AbleToBeMounted(EventPlayer().PlayerParent))
-            {
-                DismountPlayer(EventPlayer());
-                break;
-            }
-        }
+        ApplyImpulse(EventPlayer(), Up(), 20, Relative.ToWorld, ContraryMotion.Cancel);
+    }
+    if (LucioBeatDamage)
+    {
+        Damage(PlayersWithinRadius(PositionOf(EventPlayer()) + Vector(0, -2, 0), 1.5, OppositeTeamOf(TeamOf(EventPlayer())), RadiusLOS.SurfacesAndEnemyBarriers), EventPlayer(), 2000);
     }
 }
 
-rule: "Orisa Horse Dismount"
+rule: "Lucio Boop Knockback"
 Event.OngoingPlayer
-if (IsButtonHeld(EventPlayer(), Button.Crouch))
-if (PlayerParent != null)
+Player.Lucio
+if (IsFiringSecondary(EventPlayer()) == true)
+if (AngleBetweenVectors(FacingDirectionOf(EventPlayer()), Down()) < 10)
+if (LucioBoopSelfKnockback)
 {
-    DismountPlayer(EventPlayer());
-}
-
-rule: "Orisa Horse Death"
-Event.OnDeath
-Player.Orisa
-if (PlayerChild != null)
-{
-    DismountPlayer(EventPlayer().PlayerChild);
+    ApplyImpulse(EventPlayer(), FacingDirectionOf(EventPlayer()) * -1, 10, Relative.ToWorld, ContraryMotion.CancelXYZ);
 }
 
 rule: "Instant Abilities"
