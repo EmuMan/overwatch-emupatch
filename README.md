@@ -14,6 +14,10 @@ Once this project reaches an acceptable level of features, I will generate a pro
 
 All of the changes listed below can be toggled through the workshop settings to fit your preferences.
 
+### Orisa
+
+- Can now be mounted like a horse with the Interact key, and dismounted with the Crouch key (off by default)
+
 ### Reinhardt
 
 - Charge can now be ended early by pressing the Charge key a second time
