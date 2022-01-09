@@ -35,6 +35,7 @@ All of the changes listed below can be toggled through the workshop settings to 
 ### Mei
 
 - Cryo-Freeze now instantly kills anyone Mei directly falls on while using it
+- Opponents will no longer become frozen after extended contact with Mei's Endothermic Blaster
 - Mei's Ultimate now transforms her into a rolling snowball that deals 250 damage on contact
 
 ### Brigitte

@@ -7,6 +7,7 @@ globalvar define WinstonPrimalHealth;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
+globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
 globalvar define BrigitteFix;
 globalvar define LucioBeatDamage;
@@ -91,7 +92,8 @@ rule: "Initialize Globals"
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 1);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
-    MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 1);
+    MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 1);
+    MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 2);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
@@ -257,6 +259,14 @@ if (IsUsingAbility1(EventPlayer()))
         }
         Wait(0.1, WaitBehavior.IgnoreCondition);
     }
+}
+
+rule: "Anti-Freeze"
+Event.OngoingPlayer
+if (HasStatus(EventPlayer(), Status.Frozen))
+if (MeiAntiFreeze)
+{
+    ClearStatus(EventPlayer(), Status.Frozen);
 }
 
 rule: "Mei Snowball"
