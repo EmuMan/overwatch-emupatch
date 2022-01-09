@@ -9,6 +9,7 @@ globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
 globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
+globalvar define AnaSleepDamage;
 globalvar define BrigitteFix;
 globalvar define LucioBeatDamage;
 globalvar define LucioBeatSelfKnockback;
@@ -94,6 +95,7 @@ rule: "Initialize Globals"
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 1);
     MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 2);
+    AnaSleepDamage = WorkshopSettingToggle("Ana", "Sleeping Enemies Take Extra Damage", false, 0);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
@@ -364,6 +366,17 @@ if (MeiRollingSnowballUlt)
     }
 }
 
+rule: "Ana Sleep Damage"
+Event.OnDamageTaken
+if (Attacker().Hero() == Hero.Ana)
+if (EventAbility() == Button.Ability1)
+if (AnaSleepDamage)
+{
+    SetDamageReceived(EventPlayer(), 200);
+    WaitUntil(!HasStatus(EventPlayer(), Status.Asleep), 120);
+    SetDamageReceived(EventPlayer(), 100);
+}
+
 rule: "Brigitte Fix"
 if (BrigitteFix)
 {
@@ -440,6 +453,6 @@ if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
     }
     else
     {
-        CreateDummyBot(Hero.Orisa, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
+        CreateDummyBot(Hero.Ana, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
     }
 }
