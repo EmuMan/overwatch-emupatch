@@ -5,6 +5,7 @@ globalvar define ReinChargeCancel;
 globalvar define ReinFullThrottle;
 globalvar define WinstonPrimalHealth;
 globalvar define DoomfistKBResist;
+globalvar define DoomfistExtraShields;
 globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
 globalvar define MeiAntiFreeze;
@@ -23,6 +24,9 @@ playervar define PlayerParent;
 playervar define PlayerChild;
 playervar define ChargeStatus;
 playervar define LastChargeUsage;
+playervar define DoomfistShields;
+playervar define DoomfistShieldPoolID;
+playervar define IsBeingPunched;
 playervar define IceBlockVictims;
 playervar define Snowball;
 playervar define SnowballTime;
@@ -83,6 +87,13 @@ define DismountPlayer(Player child)
     child.PlayerParent = null;
 }
 
+define UpdateDoomfistShields(Player player)
+{
+    RemoveHealthPoolFromPlayer(player.DoomfistShieldPoolID);
+    AddHealthPoolToPlayer(player, HealthType.Shields, player.DoomfistShields, false, false);
+    player.DoomfistShieldPoolID = LastCreatedHealthPool();
+}
+
 
 rule: "Initialize Globals"
 {
@@ -91,7 +102,8 @@ rule: "Initialize Globals"
     ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
     WinstonPrimalHealth = WorkshopSettingToggle("Winston", "Extra Primal Rage Health", true, 0);
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
-    DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 1);
+    DoomfistExtraShields = WorkshopSettingToggle("Doomfist", "Extra Shields from Passive", true, 1);
+    DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 2);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 1);
     MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 2);
@@ -225,6 +237,67 @@ if (DoomfistKBResist)
 if (IsUsingAbility1(EventPlayer()) || IsUsingAbility2(EventPlayer()) || IsFiringSecondary(EventPlayer()))
 {
     SetKnockbackReceived(EventPlayer(), 50);
+}
+
+rule: "Track Doomfist Punch"
+Event.OnDamageTaken
+if (Attacker().Hero() == Hero.Doomfist)
+if (EventAbility() == Button.SecondaryFire)
+{
+    MinWait();
+    IsBeingPunched = true;
+    WaitUntil(!HasStatus(EventPlayer(), Status.Stunned), 120);
+    IsBeingPunched = false;
+}
+
+rule: "Doomfist Extra Shields"
+Event.OnDamageDealt
+Player.Doomfist
+if (EventAbility() == Button.Ability1 || EventAbility() == Button.Ability2 ||
+    EventAbility() == Button.SecondaryFire || EventAbility() == Button.Ultimate)
+if (DoomfistExtraShields)
+{
+    // i am pretty sure this redundancy is required for some reason.
+    RemoveHealthPoolFromPlayer(DoomfistShieldPoolID);
+    SetPlayerHealth(EventPlayer(), EventPlayer().Health() - HealthOfType(EventPlayer(), HealthType.Shields));
+    define shieldsGained = 0;
+    if (!(EventAbility() == Button.SecondaryFire && Victim().IsBeingPunched))
+    {
+        shieldsGained = EventAbility() == Button.Ultimate ? 90 : 45;
+    }
+    DoomfistShields = Min(200, DoomfistShields + shieldsGained);
+    AddHealthPoolToPlayer(EventPlayer(), HealthType.Shields, DoomfistShields, false, false);
+    DoomfistShieldPoolID = LastCreatedHealthPool();
+}
+
+rule: "Doomfist Shield Damage"
+Event.OnDamageTaken
+Player.Doomfist
+if (DoomfistExtraShields)
+{
+    DoomfistShields -= Min(DoomfistShields, EventDamage());
+}
+
+rule: "Doomfist Shield Decay"
+Event.OngoingPlayer
+Player.Doomfist
+if (DoomfistExtraShields)
+{
+    while (true)
+    {
+        WaitUntil(HealthOfType(EventPlayer(), HealthType.Shields) > 0, 120);
+        while (HealthOfType(EventPlayer(), HealthType.Shields) > 0)
+        {
+            Wait(0.5, WaitBehavior.IgnoreCondition);
+            RemoveHealthPoolFromPlayer(DoomfistShieldPoolID);
+            DoomfistShields -= Min(2, DoomfistShields);
+            if (DoomfistShields > 0)
+            {
+                AddHealthPoolToPlayer(EventPlayer(), HealthType.Shields, DoomfistShields, false, false);
+                DoomfistShieldPoolID = LastCreatedHealthPool();
+            }
+        }
+    }
 }
 
 rule: "Doomfist Bastion Punch"
@@ -455,4 +528,5 @@ if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
     {
         CreateDummyBot(Hero.Ana, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
     }
+    StartHoldingButton(PlayersInSlot(0, Team.Team2), Button.PrimaryFire);
 }

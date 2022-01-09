@@ -30,6 +30,7 @@ All of the changes listed below can be toggled through the workshop settings to 
 ### Doomfist
 
 - Now has 50% knockback resistance while using any abilities
+- Now gains 15 more shields per ability landed with the maximum shields increased from 150 to 200 and the shield decay rate increased from 3 per second to 4 per second
 - Rocket Punch can now knock a Bastion out of Sentry mode with reduced knockback and no wall collision damage
 
 ### Mei
