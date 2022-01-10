@@ -8,6 +8,7 @@ globalvar define DoomfistKBResist;
 globalvar define DoomfistExtraShields;
 globalvar define DoomfistBastionKnockout;
 globalvar define MeiIceBlockDamage;
+globalvar define MeiIceBlockBackfire;
 globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
 globalvar define AnaSleepDamage;
@@ -105,8 +106,9 @@ rule: "Initialize Globals"
     DoomfistExtraShields = WorkshopSettingToggle("Doomfist", "Extra Shields from Passive", true, 1);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 2);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
-    MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 1);
-    MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 2);
+    MeiIceBlockBackfire = WorkshopSettingToggle("Mei", "Cryo-Freeze Backfire Chance", false, 1);
+    MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 2);
+    MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 3);
     AnaSleepDamage = WorkshopSettingToggle("Ana", "Sleeping Enemies Take Extra Damage", false, 0);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
@@ -319,6 +321,7 @@ rule: "Mei Ice Block Damage"
 Event.OngoingPlayer
 Player.Mei
 if (IsUsingAbility1(EventPlayer()))
+if (MeiIceBlockDamage)
 {
     IceBlockVictims = EmptyArray();
     while (IsUsingAbility1(EventPlayer()))
@@ -333,6 +336,18 @@ if (IsUsingAbility1(EventPlayer()))
             }
         }
         Wait(0.1, WaitBehavior.IgnoreCondition);
+    }
+}
+
+rule: "Mei Ice Block Backfire"
+Event.OngoingPlayer
+Player.Mei
+if (IsUsingAbility1(EventPlayer()))
+if (MeiIceBlockBackfire)
+{
+    if (RandomInteger(0, 99) < 5)
+    {
+        Kill(EventPlayer(), EventPlayer());
     }
 }
 
@@ -473,7 +488,7 @@ if (IsUsingUltimate(EventPlayer()) == false)
 {
     BeatStatus = 0;
 }
-
+ 
 rule: "Lucio Hit Ground"
 Event.OngoingPlayer
 Player.Lucio
@@ -504,7 +519,7 @@ if (LucioBoopSelfKnockback)
 
 rule: "Instant Abilities"
 Event.OngoingPlayer
-if (WorkshopSettingToggle("Debug", "Instant Abilities (Crouch + Interact)", false, 0) == true)
+    if (WorkshopSettingToggle("Debug", "Instant Abilities (Crouch + Interact)", false, 0) == true)
 if (IsButtonHeld(EventPlayer(), Button.Interact) == true)
 if (IsButtonHeld(EventPlayer(), Button.Crouch) == true)
 {
