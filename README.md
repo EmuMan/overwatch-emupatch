@@ -40,6 +40,10 @@ All of the changes listed below can be toggled through the workshop settings to 
 - Opponents will no longer become frozen after extended contact with Mei's Endothermic Blaster
 - Mei's Ultimate now transforms her into a rolling snowball that deals 250 damage on contact
 
+### Tracer
+
+- Now passively heals for 25% of damage dealt (off by default)
+
 ### Ana
 
 - Sleeping enemies now take 200% damage (off by default)

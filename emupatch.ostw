@@ -11,6 +11,7 @@ globalvar define MeiIceBlockDamage;
 globalvar define MeiIceBlockBackfire;
 globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
+globalvar define TracerLifesteal;
 globalvar define AnaSleepDamage;
 globalvar define BrigitteFix;
 globalvar define LucioBeatDamage;
@@ -109,6 +110,7 @@ rule: "Initialize Globals"
     MeiIceBlockBackfire = WorkshopSettingToggle("Mei", "Cryo-Freeze Backfire Chance", false, 1);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 2);
     MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 3);
+    TracerLifesteal = WorkshopSettingToggle("Tracer", "Passive Lifesteal", false, 0);
     AnaSleepDamage = WorkshopSettingToggle("Ana", "Sleeping Enemies Take Extra Damage", false, 0);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
@@ -452,6 +454,14 @@ if (MeiRollingSnowballUlt)
         StopHoldingButton(EventPlayer(), Button.PrimaryFire);
         SetAmmo(EventPlayer(), 0, MaxAmmo(EventPlayer()));
     }
+}
+
+rule: "Tracer Lifesteal"
+Event.OnDamageDealt
+Player.Tracer
+if (TracerLifesteal)
+{
+    Heal(EventPlayer(), null, EventDamage() * 0.25);
 }
 
 rule: "Ana Sleep Damage"
