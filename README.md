@@ -40,6 +40,11 @@ All of the changes listed below can be toggled through the workshop settings to 
 - Opponents will no longer become frozen after extended contact with Mei's Endothermic Blaster
 - Mei's Ultimate now transforms her into a rolling snowball that deals 250 damage on contact
 
+### Reaper
+
+- Death Blossom now provides extreme gravity to Reaper while in use (off by default)
+- Death Blossom now provides extreme jump force to Reaper while in use (off by default)
+
 ### Tracer
 
 - Now passively heals for 25% of damage dealt (off by default)

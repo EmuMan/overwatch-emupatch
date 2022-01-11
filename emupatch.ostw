@@ -11,6 +11,8 @@ globalvar define MeiIceBlockDamage;
 globalvar define MeiIceBlockBackfire;
 globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
+globalvar define ReaperUltGravity;
+globalvar define ReaperUltJump;
 globalvar define TracerLifesteal;
 globalvar define AnaSleepDamage;
 globalvar define BrigitteFix;
@@ -110,6 +112,8 @@ rule: "Initialize Globals"
     MeiIceBlockBackfire = WorkshopSettingToggle("Mei", "Cryo-Freeze Backfire Chance", false, 1);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 2);
     MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 3);
+    ReaperUltGravity = WorkshopSettingToggle("Reaper", "Death Blossom Increased Gravity", false, 0);
+    ReaperUltJump = WorkshopSettingToggle("Reaper", "Death Blossom Increased Jump", false, 1);
     TracerLifesteal = WorkshopSettingToggle("Tracer", "Passive Lifesteal", false, 0);
     AnaSleepDamage = WorkshopSettingToggle("Ana", "Sleeping Enemies Take Extra Damage", false, 0);
     BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
@@ -454,6 +458,27 @@ if (MeiRollingSnowballUlt)
         StopHoldingButton(EventPlayer(), Button.PrimaryFire);
         SetAmmo(EventPlayer(), 0, MaxAmmo(EventPlayer()));
     }
+}
+
+rule: "Reaper Death Blossom Stuff"
+Event.OngoingPlayer
+Player.Reaper
+if (IsUsingUltimate(EventPlayer()))
+if (ReaperUltGravity || ReaperUltJump)
+{
+    // messy idk
+    if (ReaperUltGravity)
+    {
+        SetGravity(EventPlayer(), 500);
+        if (!ReaperUltJump) SetJumpVerticalSpeed(EventPlayer(), 200);
+    }
+    if (ReaperUltJump)
+    {
+        SetJumpVerticalSpeed(EventPlayer(), ReaperUltGravity ? 500 : 250);
+    }
+    WaitUntil(!IsUsingUltimate(EventPlayer()), 120);
+    SetGravity(EventPlayer(), 100);
+    SetJumpVerticalSpeed(EventPlayer(), 100);
 }
 
 rule: "Tracer Lifesteal"
