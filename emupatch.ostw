@@ -15,7 +15,6 @@ globalvar define ReaperUltGravity;
 globalvar define ReaperUltJump;
 globalvar define TracerLifesteal;
 globalvar define AnaSleepDamage;
-globalvar define BrigitteFix;
 globalvar define LucioBeatDamage;
 globalvar define LucioBeatSelfKnockback;
 globalvar define LucioBoopSelfKnockback;
@@ -116,7 +115,6 @@ rule: "Initialize Globals"
     ReaperUltJump = WorkshopSettingToggle("Reaper", "Death Blossom Increased Jump", false, 1);
     TracerLifesteal = WorkshopSettingToggle("Tracer", "Passive Lifesteal", false, 0);
     AnaSleepDamage = WorkshopSettingToggle("Ana", "Sleeping Enemies Take Extra Damage", false, 0);
-    BrigitteFix = WorkshopSettingToggle("Brigitte", "Fix", true, 0);
     LucioBeatDamage = WorkshopSettingToggle("Lúcio", "Sound Barrier Damage", true, 0);
     LucioBeatSelfKnockback = WorkshopSettingToggle("Lúcio", "Sound Barrier Self-Knockback", true, 1);
     LucioBoopSelfKnockback = WorkshopSettingToggle("Lúcio", "Soundwave Self-Knockback", true, 2);
@@ -498,12 +496,6 @@ if (AnaSleepDamage)
     SetDamageReceived(EventPlayer(), 200);
     WaitUntil(!HasStatus(EventPlayer(), Status.Asleep), 120);
     SetDamageReceived(EventPlayer(), 100);
-}
-
-rule: "Brigitte Fix"
-if (BrigitteFix)
-{
-    ModifyVariable(EnabledHeroes, Operation.RemoveFromArrayByValue, Hero.Brigitte);
 }
 
 rule: "Lucio Using Beat"

@@ -53,10 +53,6 @@ All of the changes listed below can be toggled through the workshop settings to 
 
 - Sleeping enemies now take 200% damage (off by default)
 
-### Brigitte
-
-- Is now fixed
-
 ### Lúcio
 
 - Sound Barrier now deals 2000 damage to anyone Lúcio lands on top of, within a small radius
