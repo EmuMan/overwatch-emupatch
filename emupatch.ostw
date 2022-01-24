@@ -7,6 +7,7 @@ globalvar define WinstonPrimalHealth;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistExtraShields;
 globalvar define DoomfistBastionKnockout;
+globalvar define EchoDuplicateKill;
 globalvar define MeiIceBlockDamage;
 globalvar define MeiIceBlockBackfire;
 globalvar define MeiAntiFreeze;
@@ -30,6 +31,7 @@ playervar define LastChargeUsage;
 playervar define DoomfistShields;
 playervar define DoomfistShieldPoolID;
 playervar define IsBeingPunched;
+playervar define EchoDuplicateKiller;
 playervar define IceBlockVictims;
 playervar define Snowball;
 playervar define SnowballTime;
@@ -107,6 +109,7 @@ rule: "Initialize Globals"
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
     DoomfistExtraShields = WorkshopSettingToggle("Doomfist", "Extra Shields from Passive", true, 1);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 2);
+    EchoDuplicateKill = WorkshopSettingToggle("Echo", "Echo Death on Duplicate Kill", true, 0);
     MeiIceBlockDamage = WorkshopSettingToggle("Mei", "Cryo-Freeze Damage", true, 0);
     MeiIceBlockBackfire = WorkshopSettingToggle("Mei", "Cryo-Freeze Backfire Chance", false, 1);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 2);
@@ -319,6 +322,27 @@ if (DoomfistBastionKnockout)
     ApplyImpulse(EventPlayer(), EventDirection() + Vector(0, 0.05, 0), 25, Relative.ToWorld, ContraryMotion.Cancel);
     Wait(0.3, WaitBehavior.IgnoreCondition);
     SetGravity(EventPlayer(), 100);
+}
+
+rule: "Echo Duplicate Sentence"
+Event.OnDamageTaken
+Player.Echo
+if (IsDuplicating(EventPlayer()))
+if (EventPlayer().Health() <= 1.0) // the wiki says that Echo's transformation occurs at HP < 1, and i'm too lazy to confirm that
+if (EchoDuplicateKill)
+{
+    EchoDuplicateKiller = Attacker();
+}
+
+rule: "Echo Execute Kill Sentence"
+Event.OngoingPlayer
+Player.Echo
+if (!IsDuplicating(EventPlayer()))
+if (EchoDuplicateKiller != null)
+if (EchoDuplicateKill)
+{
+    Kill(EventPlayer(), EchoDuplicateKiller);
+    EchoDuplicateKiller = null;
 }
 
 rule: "Mei Ice Block Damage"

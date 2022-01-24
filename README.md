@@ -33,6 +33,10 @@ All of the changes listed below can be toggled through the workshop settings to 
 - Now gains 15 more shields per ability landed with the maximum shields increased from 150 to 200 and the shield decay rate increased from 3 per second to 4 per second
 - Rocket Punch can now knock a Bastion out of Sentry mode with reduced knockback and no wall collision damage
 
+### Echo
+
+- An Echo killed while using Duplicate is no longer able to transform back and instead suffers a true death
+
 ### Mei
 
 - Cryo-Freeze now instantly kills anyone Mei directly falls on while using it
