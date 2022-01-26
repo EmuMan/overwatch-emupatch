@@ -12,6 +12,7 @@ globalvar define MeiIceBlockDamage;
 globalvar define MeiIceBlockBackfire;
 globalvar define MeiAntiFreeze;
 globalvar define MeiRollingSnowballUlt;
+globalvar define PharahQuickFall;
 globalvar define ReaperUltGravity;
 globalvar define ReaperUltJump;
 globalvar define TracerLifesteal;
@@ -114,6 +115,7 @@ rule: "Initialize Globals"
     MeiIceBlockBackfire = WorkshopSettingToggle("Mei", "Cryo-Freeze Backfire Chance", false, 1);
     MeiAntiFreeze = WorkshopSettingToggle("Mei", "Anti-Freeze", true, 2);
     MeiRollingSnowballUlt = WorkshopSettingToggle("Mei", "Rolling Snowball Ultimate", true, 3);
+    PharahQuickFall = WorkshopSettingToggle("Pharah", "Pharah Quick Fall (Crouch)", true, 0);
     ReaperUltGravity = WorkshopSettingToggle("Reaper", "Death Blossom Increased Gravity", false, 0);
     ReaperUltJump = WorkshopSettingToggle("Reaper", "Death Blossom Increased Jump", false, 1);
     TracerLifesteal = WorkshopSettingToggle("Tracer", "Passive Lifesteal", false, 0);
@@ -480,6 +482,29 @@ if (MeiRollingSnowballUlt)
         StopHoldingButton(EventPlayer(), Button.PrimaryFire);
         SetAmmo(EventPlayer(), 0, MaxAmmo(EventPlayer()));
     }
+}
+
+// Grounded checks don't actually matter here because gravity only makes a difference while you're in the air
+rule: "Pharah Quick Fall On"
+Event.OngoingPlayer
+Player.Pharah
+if (!IsOnGround(EventPlayer()))
+if (IsButtonHeld(EventPlayer(), Button.Crouch))
+if (PharahQuickFall)
+{
+    ApplyImpulse(EventPlayer(), Down(), 5, Relative.ToWorld, ContraryMotion.Incorporate);
+    SetGravity(EventPlayer(), 200);
+}
+
+// I hate this so much, but workshop settings only toggle if any of the conditions are changed, so two rules are actually needed here
+rule: "Pharah Quick Fall Off"
+Event.OngoingPlayer
+Player.Pharah
+if (!IsOnGround(EventPlayer()))
+if (!IsButtonHeld(EventPlayer(), Button.Crouch))
+if (PharahQuickFall)
+{
+    SetGravity(EventPlayer(), 100);
 }
 
 rule: "Reaper Death Blossom Stuff"
