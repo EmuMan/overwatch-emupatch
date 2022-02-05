@@ -1,4 +1,6 @@
 {
+  "Description": "A custom patch made by EmuMan to add new ability features and changes into the game, mostly for entertainment.",
+  "Mode Name": "EmuPatch",
   "Modes": {
     "All": {
       "Competitive Rules": true
@@ -8,6 +10,15 @@
     "Escort": {},
     "Hybrid": {}
   },
-  "Description": "A custom patch made by EmuMan to add new ability features and changes into the game, mostly for entertainment.",
-  "Mode Name": "EmuPatch"
+  "Heroes": {
+    "General": {
+      "D.va": {
+        "Defense Matrix Maximum Time": 87.0,
+        "Defense Matrix Recharge Rate": 87.0
+      },
+      "Sigma": {
+        "Experimental Barrier Recharge Rate": 125.0
+      }
+    }
+  }
 }

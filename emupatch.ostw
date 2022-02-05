@@ -1,9 +1,23 @@
 import "customGameSettings.json";
 
 globalvar define OrisaMountable;
+globalvar define OrisaMovementSpeed;
+globalvar define OrisaDamageFalloff;
+globalvar define OrisaShieldHealth;
+globalvar define OrisaShieldCooldown;
 globalvar define ReinChargeCancel;
+globalvar define ReinFireStrikeCharges;
+globalvar define ReinFireStrikeDamage;
 globalvar define ReinFullThrottle;
+globalvar define RoadhogDamageReduction;
+globalvar define RoadhogHookDamage;
+globalvar define RoadhogPelletDamage;
+globalvar define RoadhogRateOfFire;
+globalvar define SigmaBarrierHealth;
 globalvar define WinstonPrimalHealth;
+globalvar define WinstonJumpPackCooldown;
+globalvar define WreckingBallDecreasedAmmo;
+globalvar define ZaryaProjectedBarrierCharges;
 globalvar define DoomfistKBResist;
 globalvar define DoomfistExtraShields;
 globalvar define DoomfistBastionKnockout;
@@ -28,6 +42,12 @@ playervar define LastHero;
 playervar define PlayerParent;
 playervar define PlayerChild;
 playervar define ChargeStatus;
+playervar define FireStrikeCharges;
+playervar define FireStrikeProgress;
+playervar define FireStrikeProgressBar;
+playervar define ProjBarrierCharges;
+playervar define ProjBarrierProgress;
+playervar define ProjBarrierProgressBar;
 playervar define LastChargeUsage;
 playervar define DoomfistShields;
 playervar define DoomfistShieldPoolID;
@@ -100,13 +120,57 @@ define UpdateDoomfistShields(Player player)
     player.DoomfistShieldPoolID = LastCreatedHealthPool();
 }
 
+void FireStrikeChargeUpdate() playervar "Fire Strike Charge Update"
+{
+    while (FireStrikeCharges < 2)
+    {
+        ChaseVariableAtRate(FireStrikeProgress, 6, 1, RateChaseReevaluation.None);
+        Wait(6 - FireStrikeProgress);
+        FireStrikeCharges++;
+        if (FireStrikeCharges < 2)
+        {
+            FireStrikeProgress = 0;
+        }
+        SetAbility2Enabled(EventPlayer(), true);
+    }
+}
+
+void ProjBarrierChargeUpdate() playervar "Projected Barrier Charge Update"
+{
+    while (ProjBarrierCharges < 2)
+    {
+        ChaseVariableAtRate(ProjBarrierProgress, 8, 1, RateChaseReevaluation.None);
+        Wait(8 - ProjBarrierProgress);
+        ProjBarrierCharges++;
+        if (ProjBarrierCharges < 2)
+        {
+            ProjBarrierProgress = 0;
+        }
+        SetAbility2Enabled(EventPlayer(), true);
+    }
+}
+
 
 rule: "Initialize Globals"
 {
-    OrisaMountable = WorkshopSettingToggle("Orisa", "Mountable", false, 0);
+    OrisaMountable = WorkshopSettingToggle("Orisa", "Mountable", true, 0);
+    OrisaMovementSpeed = WorkshopSettingToggle("Orisa", "Increased Movement Speed (Outside of Fortify)", true, 1);
+    OrisaDamageFalloff = WorkshopSettingToggle("Orisa", "Fusion Driver Damage Falloff", true, 2);
+    OrisaShieldHealth = WorkshopSettingToggle("Orisa", "Protective Barrier Health Decreased", true, 3);
+    OrisaShieldCooldown = WorkshopSettingToggle("Orisa", "Protective Barrier Cooldown Decreased", true, 4);
     ReinChargeCancel = WorkshopSettingToggle("Reinhardt", "Charge Cancel", true, 0);
-    ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 1);
+    ReinFireStrikeCharges = WorkshopSettingToggle("Reinhardt", "Fire Strike Two Charges", true, 1);
+    ReinFireStrikeDamage = WorkshopSettingToggle("Reinhardt", "Fire Strike Damage Decreased", true, 2);
+    ReinFullThrottle = WorkshopSettingToggle("Reinhardt", "Full Throttle", false, 3);
+    RoadhogDamageReduction = WorkshopSettingToggle("Roadhog", "Take a Breather Lower Damage Reduction", true, 0);
+    RoadhogHookDamage = WorkshopSettingToggle("Roadhog", "Chain Hook Damage Increased", true, 1);
+    RoadhogPelletDamage = WorkshopSettingToggle("Roadhog", "Scrap Gun Damage Decreased", true, 2);
+    RoadhogRateOfFire = WorkshopSettingToggle("Roadhog", "Scrap Gun Rate of Fire Decreased", true, 3);
+    SigmaBarrierHealth = WorkshopSettingToggle("Sigma", "Experimental Barrier Health Decreased", true, 0);
     WinstonPrimalHealth = WorkshopSettingToggle("Winston", "Extra Primal Rage Health", true, 0);
+    WinstonJumpPackCooldown = WorkshopSettingToggle("Winston", "Jump Pack Cooldown Decreased", true, 1);
+    WreckingBallDecreasedAmmo = WorkshopSettingToggle("Wrecking Ball", "Maximum Ammo Decreased", true, 0);
+    ZaryaProjectedBarrierCharges = WorkshopSettingToggle("Zarya", "Projected Barrier Two Charges", true, 0);
     DoomfistKBResist = WorkshopSettingToggle("Doomfist", "Knockback Resistance (when using abilities)", true, 0);
     DoomfistExtraShields = WorkshopSettingToggle("Doomfist", "Extra Shields from Passive", true, 1);
     DoomfistBastionKnockout = WorkshopSettingToggle("Doomfist", "Rocket Punch Removes Bastion Sentry Mode", true, 2);
@@ -132,6 +196,107 @@ rule: "Player Initialization"
 Event.OnPlayerJoin
 {
     SetAllowedHeroes(EventPlayer(), EnabledHeroes);
+}
+
+rule: "On Player Hero Swap"
+Event.OngoingPlayer
+Player.All
+{
+    while (true)
+    {
+        LastHero = EventPlayer().Hero();
+        Wait(1, WaitBehavior.IgnoreCondition);
+        if (EventPlayer().Hero() != LastHero)
+        {
+            SetMaxHealth(EventPlayer(), 100);
+            SetMoveSpeed(EventPlayer(), 100);
+            SetDamageDealt(EventPlayer(), 100);
+            SetDamageReceived(EventPlayer(), 100);
+            SetGravity(EventPlayer(), 100);
+            StopForcingThrottle(EventPlayer());
+            RemoveAllHealthPoolsFromPlayer(EventPlayer());
+
+            if (LastHero == Hero.Reinhardt)
+            {
+                DestroyProgressBarHudText(FireStrikeProgressBar);
+            }
+            else if (LastHero == Hero.Zarya)
+            {
+                DestroyProgressBarHudText(ProjBarrierProgressBar);
+            }
+
+            if (EventPlayer().Hero() == Hero.Reinhardt)
+            {
+                if (ReinFullThrottle)
+                {
+                    ForceThrottle(EventPlayer(), 1, 1, 0, 0, 0, 1);
+                }
+                if (ReinFireStrikeDamage)
+                {
+                    SetDamageDealt(EventPlayer(), 80);
+                }
+                if (ReinFireStrikeCharges)
+                {
+                    FireStrikeCharges = 2;
+                    FireStrikeProgress = 6.0;
+                    CreateProgressBarHudText(
+                        VisibleTo         : EventPlayer(),
+                        Value             : 100 * FireStrikeProgress / 6.0,
+                        Text              : $"Charges: {FireStrikeCharges}",
+                        Location          : Location.Top,
+                        SortOrder         : 10,
+                        ProgressBarColor  : Color.Orange,
+                        TextColor         : Color.White,
+                        Reevaluation      : ProgressBarHudEvaluation.Values,
+                        NonteamSpectators : Spectators.DefaultVisibility
+                    );
+                    FireStrikeProgressBar = LastTextID();
+                }
+            }
+            else if (EventPlayer().Hero() == Hero.Zarya && ZaryaProjectedBarrierCharges)
+            {
+                ProjBarrierCharges = 2;
+                ProjBarrierProgress = 8.0;
+                CreateProgressBarHudText(
+                    VisibleTo         : EventPlayer(),
+                    Value             : 100 * ProjBarrierProgress / 8.0,
+                    Text              : $"Charges: {ProjBarrierCharges}",
+                    Location          : Location.Top,
+                    SortOrder         : 10,
+                    ProgressBarColor  : Color.Purple,
+                    TextColor         : Color.White,
+                    Reevaluation      : ProgressBarHudEvaluation.Values,
+                    NonteamSpectators : Spectators.DefaultVisibility
+                );
+                ProjBarrierProgressBar = LastTextID();
+            }
+            else if (EventPlayer().Hero() == Hero.WreckingBall && WreckingBallDecreasedAmmo)
+            {
+                SetMaxAmmo(EventPlayer(), 0, 70);
+                SetAmmo(EventPlayer(), 0, 70);
+            }
+            else if (EventPlayer().Hero() == Hero.Sigma && SigmaBarrierHealth)
+            {
+                SetMaxHealth(EventPlayer(), 100 * (6 / 7));
+                AddHealthPoolToPlayer(EventPlayer(), HealthType.Health, 300 * (1 / 7), true, false);
+                AddHealthPoolToPlayer(EventPlayer(), HealthType.Shields, 100 * (1 / 7), true, false);
+            }
+            else if (EventPlayer().Hero() == Hero.Orisa)
+            {
+                if (OrisaMovementSpeed)
+                {
+                    // Need this to cancel above action
+                    SetMoveSpeed(EventPlayer(), 130);
+                }
+                if (OrisaShieldHealth)
+                {
+                    SetMaxHealth(EventPlayer(), 100 * (5 / 6));
+                    AddHealthPoolToPlayer(EventPlayer(), HealthType.Health, 200 * (1 / 6), true, false);
+                    AddHealthPoolToPlayer(EventPlayer(), HealthType.Health, 250 * (1 / 6), true, false);
+                }
+            }
+        }
+    }
 }
 
 rule: "Orisa Horse Mount"
@@ -177,6 +342,47 @@ if (PlayerChild != null)
     DismountPlayer(EventPlayer().PlayerChild);
 }
 
+rule: "Orisa Movement Speed Increase"
+Event.OngoingPlayer
+Player.Orisa
+if (!IsUsingAbility1(EventPlayer()))
+if (OrisaMovementSpeed)
+{
+    SetMoveSpeed(EventPlayer(), 130);
+}
+
+rule: "Orisa Movement Speed Reset"
+Event.OngoingPlayer
+Player.Orisa
+if (IsUsingAbility1(EventPlayer()))
+if (OrisaMovementSpeed)
+{
+    SetMoveSpeed(EventPlayer(), 100);
+}
+
+rule: "Orisa Damage Falloff"
+Event.OnDamageDealt
+Player.Orisa
+if (EventAbility() == Button.PrimaryFire)
+if (OrisaDamageFalloff)
+{
+    define distance = DistanceBetween(Attacker(), Victim());
+    if (distance < 30)
+    {
+        Damage(Victim(), Attacker(), Max(6, 6 - (6 / 20) * (distance - 10)));
+    }
+}
+
+rule: "Orisa Shield Cooldown"
+Event.OngoingPlayer
+Player.Orisa
+if (IsUsingAbility2(EventPlayer()))
+if (OrisaShieldCooldown)
+{
+    WaitUntil(!IsUsingAbility2(EventPlayer()), 1);
+    SetAbilityCooldown(EventPlayer(), Button.Ability2, 9);
+}
+
 rule: "Rein Using Charge"
 Event.OngoingPlayer
 Player.Reinhardt
@@ -207,24 +413,101 @@ if (ReinChargeCancel)
     ApplyImpulse(EventPlayer(), FacingDirectionOf(EventPlayer()) + Vector(0, 0.1, 0), 10, Relative.ToWorld, ContraryMotion.Incorporate);
 }
 
-rule: "Rein Full Throttle"
+rule: "Rein Fire Strike Charges"
 Event.OngoingPlayer
-if (ReinFullThrottle)
+Player.Reinhardt
+if (IsUsingAbility2(EventPlayer()))
+if (ReinFireStrikeCharges)
 {
-    LastHero = HeroOf(EventPlayer());
-    MinWait();
-    if (LastHero != HeroOf(EventPlayer()))
-    {
-        if (HeroOf(EventPlayer()) == Hero.Reinhardt)
-        {
-            ForceThrottle(EventPlayer(), 1, 1, 0, 0, 0, 1);
-        }
-        else
-        {
-            StopForcingThrottle(EventPlayer());
-        }
+    FireStrikeCharges--;
+    if (FireStrikeCharges == 0) {
+        SetAbility2Enabled(EventPlayer(), false);
     }
-    Loop();
+    if (FireStrikeCharges == 1) // meaning it was just at 2
+    {
+        FireStrikeProgress = 0.0;
+    }
+    async FireStrikeChargeUpdate();
+    WaitUntil(!IsUsingAbility2(EventPlayer()), 120);
+    SetAbilityCooldown(EventPlayer(), Button.Ability2, 0);
+}
+
+rule: "Rein Fire Strike Damage"
+Event.OnDamageTaken
+Player.Reinhardt
+if (HeroOf(Attacker()) == Hero.Reinhardt)
+if (ReinFireStrikeDamage)
+{
+    Damage(Victim(), Attacker(), EventDamage() * 0.25);
+}
+
+rule: "Roadhog Lower Damage Reduction"
+Event.OngoingPlayer
+Player.Roadhog
+if (IsUsingAbility2(EventPlayer()))
+if (RoadhogDamageReduction)
+{
+    SetDamageReceived(EventPlayer(), 120);
+}
+
+rule: "Roadhog Increase Damage Reduction"
+Event.OngoingPlayer
+Player.Roadhog
+if (!IsUsingAbility2(EventPlayer()))
+if (RoadhogDamageReduction)
+{
+    SetDamageReceived(EventPlayer(), 100);
+}
+
+// Instead of doing this on a damage-by-damage basis, I think
+// it is much more efficient to change Roadhog's damage dealt
+// based on whether or not he is using certain abilities.
+rule: "Roadhog Damage Scrap Gun Modifier"
+Event.OngoingPlayer
+Player.Roadhog
+if (!(IsUsingAbility1(EventPlayer()) || IsUsingUltimate(EventPlayer()) || IsMeleeing(EventPlayer())))
+if (RoadhogPelletDamage)
+{
+    SetDamageDealt(EventPlayer(), 91);
+}
+
+rule: "Roadhog Damage Hook Modifier"
+Event.OngoingPlayer
+Player.Roadhog
+if (IsUsingAbility1(EventPlayer()))
+if (RoadhogHookDamage)
+{
+    SetDamageDealt(EventPlayer(), 133);
+}
+
+rule: "Roadhog Damage No Modifier (Ult + Melee)"
+Event.OngoingPlayer
+Player.Roadhog
+if (IsUsingUltimate(EventPlayer()) || IsMeleeing(EventPlayer()) ||
+    (!IsUsingAbility1(EventPlayer()) && !RoadhogPelletDamage))
+if (RoadhogHookDamage || RoadhogPelletDamage)
+{
+    SetDamageDealt(EventPlayer(), 100);
+}
+
+rule: "Roadhog Decreased Rate of Fire"
+Event.OngoingPlayer
+Player.Roadhog
+if (IsFiringPrimary(EventPlayer()) || IsFiringSecondary(EventPlayer()))
+{
+    DisallowButton(EventPlayer(), Button.PrimaryFire);
+    DisallowButton(EventPlayer(), Button.SecondaryFire);
+    Wait(1.06);
+    AllowButton(EventPlayer(), Button.PrimaryFire);
+    AllowButton(EventPlayer(), Button.SecondaryFire);
+    if (IsButtonHeld(EventPlayer(), Button.PrimaryFire))
+    {
+        PressButton(EventPlayer(), Button.PrimaryFire);
+    }
+    else if (IsButtonHeld(EventPlayer(), Button.SecondaryFire))
+    {
+        PressButton(EventPlayer(), Button.SecondaryFire);
+    }
 }
 
 rule: "Winston Bonus HP"
@@ -236,9 +519,39 @@ if (WinstonPrimalHealth)
         EventPlayer().SetMaxHealth(150);
         MinWait();
         SetPlayerHealth(EventPlayer(), EventPlayer().MaxHealth());
-        WaitUntil(EventPlayer().Hero() != Hero.Winston || !IsUsingUltimate(EventPlayer()), 120);
+        WaitUntil(!IsUsingUltimate(EventPlayer()), 120);
         EventPlayer().SetMaxHealth(100);
     }
+}
+
+rule: "Winston Jump Pack Cooldown"
+Event.OngoingPlayer
+Player.Winston
+if (EventPlayer().IsUsingAbility1())
+if (!IsUsingUltimate(EventPlayer()))
+if (WinstonJumpPackCooldown)
+{
+    MinWait();
+    SetAbilityCooldown(EventPlayer(), Button.Ability1, 5);
+}
+
+rule: "Zarya Projected Barrier Charges"
+Event.OngoingPlayer
+Player.Zarya
+if (IsUsingAbility2(EventPlayer()))
+if (ZaryaProjectedBarrierCharges)
+{
+    ProjBarrierCharges--;
+    if (ProjBarrierCharges == 0) {
+        SetAbility2Enabled(EventPlayer(), false);
+    }
+    if (ProjBarrierCharges == 1) // meaning it was just at 2
+    {
+        ProjBarrierProgress = 0.0;
+    }
+    async ProjBarrierChargeUpdate();
+    WaitUntil(!IsUsingAbility2(EventPlayer()), 120);
+    SetAbilityCooldown(EventPlayer(), Button.Ability2, 0);
 }
 
 rule: "Doomfist KB Resist"
@@ -620,4 +933,11 @@ if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
         CreateDummyBot(Hero.Ana, Team.Team2, 0, PositionOf(EventPlayer()), FacingDirectionOf(EventPlayer()));
     }
     StartHoldingButton(PlayersInSlot(0, Team.Team2), Button.PrimaryFire);
+}
+
+rule: "Ally Bot TEMP"
+Event.OngoingPlayer
+if (IsButtonHeld(EventPlayer(), Button.Melee))
+{
+    CreateDummyBot(Hero.Ana, EventPlayer().Team(), -1, EventPlayer(), EventPlayer().FacingDirection());
 }

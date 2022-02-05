@@ -12,20 +12,51 @@ Once this project reaches an acceptable level of features, I will generate a pro
 
 ## Changes
 
-All of the changes listed below can be toggled through the workshop settings to fit your preferences.
+All of the changes listed below can be toggled through the workshop settings to fit your preferences. Changes marked with a (*) must instead be modified in their respective hero settings.
+
+### D.Va
+
+- Defense Matrix usage rate increased by 15% (*)
 
 ### Orisa
 
-- Can now be mounted like a horse with the Interact key, and dismounted with the Crouch key (off by default)
+- Can now be mounted like a horse with the Interact key, and dismounted with the Crouch key
+- Movement speed increased by 30% while not using Fortify
+- Damage falloff added to Fusion Driver, starting at 10 meters (11 damage) and stopping at 30 meters (5 damage)
+- Protective Barrier health decreased from 600 to 500 hit points
+- Protective Barrier cooldown decreased from 6 to 5 seconds
 
 ### Reinhardt
 
 - Charge can now be ended early by pressing the Charge key a second time
+- Fire Strike now has two charges
+- Fire Strike damage decreased from 100 to 80
 - Reinhardt will now always be full throttling forwards, regardless of user input (off by default)
+
+### Roadhog
+
+- Take a Breather damage reduction reduced from 50% to 40%
+- Chain Hook damage increased from 30 to 40
+- Scrap Gun pellet damage decreased from 6.6 to 6
+- Scrap Gun rate of fire decreased by 20%
+
+### Sigma
+
+- Experimental Barrier health decreased from 700 to 600 hit points
+- Experimental Barrier recharge rate increased from 80 to 100 hit points per second (*)
 
 ### Winston
 
 - Primal Rage max health increased from 1000 to 1500
+- Jump Pack cooldown decreased from 6 to 5 seconds outside of Primal Rage
+
+### Wrecking Ball
+
+- Quad Cannons clip size reduced from 80 to 70
+
+### Zarya
+
+- Projected Barrier now has two charges (but only one Projected Barrier may be active at a time)
 
 ### Doomfist
 
@@ -66,3 +97,8 @@ All of the changes listed below can be toggled through the workshop settings to 
 - Sound Barrier now deals 2000 damage to anyone Lúcio lands on top of, within a small radius
 - Sound Barrier now launches Lúcio directly upwards when it goes off
 - Soundwave now gives Lúcio an upwards boost when pointed within 10 degrees of straight down
+
+## Known Issues
+
+- Sigma's shields do not regenerate past a certain point (fixable)
+- Sigma's Experimental Barrier will not regenerate past 584 HP (no idea why this happens)
