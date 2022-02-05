@@ -934,10 +934,3 @@ if (IsButtonHeld(EventPlayer(), Button.Crouch) == false)
     }
     StartHoldingButton(PlayersInSlot(0, Team.Team2), Button.PrimaryFire);
 }
-
-rule: "Ally Bot TEMP"
-Event.OngoingPlayer
-if (IsButtonHeld(EventPlayer(), Button.Melee))
-{
-    CreateDummyBot(Hero.Ana, EventPlayer().Team(), -1, EventPlayer(), EventPlayer().FacingDirection());
-}
